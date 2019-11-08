@@ -1,6 +1,9 @@
 #include <benchmark/benchmark.h>
 
+#include "papipp.h"
+
 #include <algorithm>
+#include <iostream>
 #include <random>
 #include <vector>
 
@@ -37,6 +40,11 @@ template <typename Initializer> static void visit(benchmark::State &state) {
   v2.resize(size);
   Initializer::init(v2);
 
+  papi::event_set<PAPI_TOT_INS, PAPI_TOT_CYC, PAPI_L1_DCM, PAPI_L2_DCM,
+                  PAPI_L3_LDM>
+      events;
+  events.start_counters();
+
   for (auto _ : state) {
     int sum = 0;
     for (int i : v2)
@@ -44,6 +52,17 @@ template <typename Initializer> static void visit(benchmark::State &state) {
     benchmark::DoNotOptimize(&sum);
   }
 
+  events.stop_counters();
+
+  // double ipc = double(events.get<PAPI_TOT_INS>().counter()) /
+  events.get<PAPI_TOT_CYC>().counter();
+  // state.counters["ipc"] = ipc;
+  state.counters["L1M"] =
+      double(events.get<PAPI_L1_DCM>().counter()) / state.iterations();
+  state.counters["L2M"] =
+      double(events.get<PAPI_L2_DCM>().counter()) / state.iterations();
+  state.counters["L3M"] =
+      double(events.get<PAPI_L3_LDM>().counter()) / state.iterations();
   state.SetBytesProcessed(2 * size * sizeof(int) * state.iterations());
   state.counters["data"] = 2 * size * sizeof(int);
 }
