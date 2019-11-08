@@ -3,6 +3,8 @@
 #include "../maciek/benchmarks1/mtrace.h"
 #include "../maciek/benchmarks1/short_alloc.h"
 
+#include "../papipp/papipp.h"
+
 #include <algorithm>
 #include <vector>
 

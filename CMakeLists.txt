@@ -12,4 +12,10 @@ add_subdirectory(maciek)
 set(BENCHMARK_ENABLE_TESTING OFF CACHE INTERNAL "" FORCE)
 add_subdirectory(google_benchmark)
 
+add_subdirectory(papipp)
+
+add_library(papipp INTERFACE)
+target_include_directories(papipp INTERFACE $CMAKE_CURRENT_SOURCE_DIR)
+target_link_libraries(papipp INTERFACE papi)
+
 add_subdirectory(oleksandr)

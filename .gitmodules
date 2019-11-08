@@ -1,3 +1,6 @@
 [submodule "google_benchmark"]
 	path = google_benchmark
 	url = https://github.com/google/benchmark.git
+[submodule "papipp"]
+	path = papipp
+	url = https://github.com/david-grs/papipp.git

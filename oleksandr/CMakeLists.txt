@@ -10,4 +10,5 @@ add_executable(
 target_link_libraries(
   read_access
   benchmark
+  papipp
 )
