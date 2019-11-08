@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <iostream>
+#include <memory>
 #include <optional>
 #include <vector>
 
@@ -18,11 +19,15 @@ struct OpenAddressingMap
     : OpenAddressingMap(std::begin(c), std::end(c)) {}
 
   void insert(const std::string& value) {
-    auto start = getPosition(data, value);
+    auto [start, hash] = getPosition(data, value);
+
     for (auto it = start; it != start - 1;) {
       auto& optionalValue = *it;
-      if (!optionalValue.has_value()) {
-        optionalValue = value;
+
+      if (!optionalValue.data) {
+        optionalValue.data = std::make_unique<std::string>(value);
+        optionalValue.hash = hash;
+
         ++dataSize;
         return;
       }
@@ -37,14 +42,14 @@ struct OpenAddressingMap
   }
 
   bool has(std::string_view value) const {
-    auto start = getPosition(data, value);
+    auto [start, hash] = getPosition(data, value);
     for (auto it = start; it != start - 1;) {
       auto& optionalValue = *it;
-      if (!optionalValue.has_value()) {
+      if (!optionalValue.data) {
         return false;
       }
 
-      if (optionalValue.value() == value) {
+      if (optionalValue.hash == hash && *optionalValue.data == value) {
         return true;
       }
 
@@ -58,18 +63,24 @@ struct OpenAddressingMap
   }
 
   size_t size() const {
-    return data.size();
+    return dataSize;
   }
 
 private:
   template <typename T>
-  static auto getPosition(T&& t, std::string_view value) -> decltype(t.begin()) {
+  static auto getPosition(T&& t, std::string_view value) -> std::pair<decltype(t.begin()), size_t> {
     auto hash = std::hash<std::string_view>()(value);
     auto position = hash % t.size();
 
-    return t.begin() + position;
+    return {t.begin() + position, hash};
   }
 
-  std::vector<std::optional<std::string>> data;
+  struct Bucket
+  {
+    std::unique_ptr<std::string> data = nullptr;
+    size_t hash = 0;
+  };
+
+  std::vector<Bucket> data;
   size_t dataSize = 0;
 };
