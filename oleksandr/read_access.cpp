@@ -1,9 +1,6 @@
 #include <benchmark/benchmark.h>
 
-#include "../maciek/benchmarks1/mtrace.h"
-#include "../maciek/benchmarks1/short_alloc.h"
-
-#include "../papipp/papipp.h"
+#include <papipp/papipp.h>
 
 #include <algorithm>
 #include <vector>
@@ -24,9 +21,6 @@ struct Sequential
   T last{};
 };
 
-template <class T, std::size_t BufSize = 1024 * 1024>
-using SmallVector = std::vector<T, short_alloc<T, BufSize, alignof(T)>>;
-
 template <typename Container, typename Generator>
 Container generateContainer(size_t size) {
   Container result;
@@ -43,6 +37,9 @@ static void sequential(benchmark::State& state) {
   auto data = generateContainer<Container, Random>(size);
   auto indices = generateContainer<Container, Sequential<int>>(size);
 
+  papi::event_set<PAPI_TOT_INS, PAPI_TOT_CYC, PAPI_L3_LDM> events;
+  events.start_counters();
+
   for (auto _ : state) {
     int res = 0;
     for (auto i : indices) {
@@ -52,6 +49,10 @@ static void sequential(benchmark::State& state) {
     benchmark::DoNotOptimize(res);
   }
 
+  events.stop_counters();
+  double ipc = double(events.get<PAPI_TOT_INS>().counter()) / events.get<PAPI_TOT_CYC>().counter();
+  state.counters["ipc"] = ipc;
+  state.counters["l3m"] = events.get<PAPI_L3_LDM>().counter();
   state.SetBytesProcessed(2 * size * sizeof(int) * state.iterations());
   state.counters["data"] = 2 * size * sizeof(int);
 }
@@ -65,6 +66,9 @@ static void random(benchmark::State& state) {
 
   std::random_shuffle(indices.begin(), indices.end());
 
+  papi::event_set<PAPI_TOT_INS, PAPI_TOT_CYC, PAPI_L3_LDM> events;
+  events.start_counters();
+
   for (auto _ : state) {
     int res = 0;
     for (auto i : indices) {
@@ -74,11 +78,15 @@ static void random(benchmark::State& state) {
     benchmark::DoNotOptimize(res);
   }
 
+  events.stop_counters();
+  double ipc = double(events.get<PAPI_TOT_INS>().counter()) / events.get<PAPI_TOT_CYC>().counter();
+  state.counters["ipc"] = ipc;
+  state.counters["l3m"] = events.get<PAPI_L3_LDM>().counter();
   state.SetBytesProcessed(2 * size * sizeof(int) * state.iterations());
   state.counters["data"] = 2 * size * sizeof(int);
 }
 
-BENCHMARK_TEMPLATE(sequential, std::vector<int>)->RangeMultiplier(2)->Range(128, 512 * 1024);
-BENCHMARK_TEMPLATE(random, std::vector<int>)->RangeMultiplier(2)->Range(128, 512 * 1024);
+BENCHMARK_TEMPLATE(sequential, std::vector<int>)->RangeMultiplier(2)->Range(128, 1024 * 1024 * 4);
+BENCHMARK_TEMPLATE(random, std::vector<int>)->RangeMultiplier(2)->Range(128, 1024 * 1024 * 4);
 
 BENCHMARK_MAIN();
