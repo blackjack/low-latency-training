@@ -15,7 +15,9 @@ const auto DICT = "/etc/dictionaries-common/words";
 struct Vector : std::vector<std::string>
 {
   Vector(std::vector<std::string>&& data)
-    : std::vector<std::string>(std::move(data)) {}
+    : std::vector<std::string>(std::move(data)) {
+    std::sort(begin(), end());
+  }
 
   bool has(std::string_view word) const {
     return std::binary_search(begin(), end(), word);
@@ -33,7 +35,13 @@ struct Set : Underlying
     : Underlying(std::begin(data), std::end(data)) {}
 
   bool has(std::string_view word) const {
-    return Underlying::count(word) > 0;
+    using Key = typename Underlying::key_type;
+    if constexpr (std::is_convertible_v<std::string_view, Key>) {
+      return Underlying::find(word) != Underlying::end();
+    } else {
+      Key key(word);
+      return Underlying::find(key) != Underlying::end();
+    }
   }
 };
 
@@ -97,4 +105,6 @@ static void search(benchmark::State& state) {
 BENCHMARK_TEMPLATE(search, Vector);
 BENCHMARK_TEMPLATE(search, Set<std::set<std::string_view>>);
 BENCHMARK_TEMPLATE(search, Set<std::unordered_set<std::string_view>>);
+BENCHMARK_TEMPLATE(search, Set<std::set<std::string>>);
+BENCHMARK_TEMPLATE(search, Set<std::unordered_set<std::string>>);
 BENCHMARK_MAIN();
