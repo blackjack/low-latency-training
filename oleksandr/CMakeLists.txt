@@ -22,3 +22,13 @@ target_link_libraries(
   benchmark
   papipp
 )
+
+add_executable(
+  associated_containers
+  associated_containers.cpp
+)
+
+target_link_libraries(
+  associated_containers
+  benchmark
+)
