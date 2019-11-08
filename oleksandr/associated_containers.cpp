@@ -1,5 +1,7 @@
 #include <benchmark/benchmark.h>
 
+#include "open_addressing_map.hpp"
+
 #include "../maciek/dictionary/utils.h"
 
 #include <algorithm>
@@ -129,12 +131,14 @@ BENCHMARK_TEMPLATE(InDictionary, Set<std::set<std::string_view>>);
 BENCHMARK_TEMPLATE(InDictionary, Set<std::unordered_set<std::string_view>>);
 BENCHMARK_TEMPLATE(InDictionary, Set<std::set<std::string>>);
 BENCHMARK_TEMPLATE(InDictionary, Set<std::unordered_set<std::string>>);
+BENCHMARK_TEMPLATE(InDictionary, OpenAddressingMap<std::string>);
 BENCHMARK_TEMPLATE(NotInDictionary, Vector<LinearSearch>);
 BENCHMARK_TEMPLATE(NotInDictionary, Vector<BinarySearch>);
 BENCHMARK_TEMPLATE(NotInDictionary, Set<std::set<std::string_view>>);
 BENCHMARK_TEMPLATE(NotInDictionary, Set<std::unordered_set<std::string_view>>);
 BENCHMARK_TEMPLATE(NotInDictionary, Set<std::set<std::string>>);
 BENCHMARK_TEMPLATE(NotInDictionary, Set<std::unordered_set<std::string>>);
+BENCHMARK_TEMPLATE(NotInDictionary, OpenAddressingMap<std::string>);
 
 int main(int argc, char** argv) {
   static const int DICT_SIZE = 100'000;
