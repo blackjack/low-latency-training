@@ -1,5 +1,7 @@
 #include <benchmark/benchmark.h>
 
+#include "../maciek/dictionary/utils.h"
+
 #include <algorithm>
 #include <filesystem>
 #include <fstream>
@@ -12,24 +14,38 @@
 
 const auto DICT = "/etc/dictionaries-common/words";
 
+struct BinarySearch
+{
+  template <typename It, typename Value>
+  bool operator()(It&& begin, It&& end, Value&& value) const {
+    return std::binary_search(begin, end, std::forward<Value>(value));
+  }
+};
+
+struct LinearSearch
+{
+  template <typename It, typename Value>
+  bool operator()(It&& begin, It&& end, Value&& value) const {
+    return std::find(begin, end, std::forward<Value>(value)) != end;
+  }
+};
+
+template <typename Algorithm>
 struct Vector : std::vector<std::string>
 {
-  Vector(std::vector<std::string>&& data)
-    : std::vector<std::string>(std::move(data)) {
+  Vector(const std::vector<std::string>& data)
+    : std::vector<std::string>(data) {
     std::sort(begin(), end());
   }
 
   bool has(std::string_view word) const {
-    return std::binary_search(begin(), end(), word);
+    return Algorithm()(begin(), end(), word);
   }
 };
 
 template <typename Underlying>
 struct Set : Underlying
 {
-  Set(Underlying&& data)
-    : Underlying(std::move(data)) {}
-
   template <typename T>
   Set(const T& data)
     : Underlying(std::begin(data), std::end(data)) {}
@@ -46,11 +62,11 @@ struct Set : Underlying
 };
 
 template <typename Table>
-class Dictionary
+class MyDictionary
 {
 public:
-  Dictionary(std::vector<std::string>&& words)
-    : t(std::move(words)) {}
+  MyDictionary(const std::vector<std::string>& words)
+    : t(words) {}
 
   bool isInDictionary(std::string_view word) const {
     return t.has(word);
@@ -64,47 +80,65 @@ private:
   Table t;
 };
 
-std::vector<std::string> loadWords(const std::filesystem::path& path = DICT) {
-  std::vector<std::string> result;
+std::vector<std::string> wordsIn;    // = load();
+std::vector<std::string> wordsNotIn; // = loadMangled();
 
-  std::ifstream stream(path);
-  if (!stream) {
-    throw std::runtime_error("Failed to open: " + path.string() + ": " + std::strerror(errno));
+template <typename Table>
+static void InDictionary(benchmark::State& state) {
+  MyDictionary<Table> dict(wordsIn);
+
+  bool allIn = true;
+  auto it = wordsIn.begin();
+  for (auto _ : state) {
+    allIn = allIn && dict.isInDictionary(*it);
+    ++it;
+    if (it == wordsIn.end())
+      it = wordsIn.begin();
   }
 
-  std::string line;
-  while (std::getline(stream, line)) {
-    result.push_back(line);
-  }
-
-  return result;
+  if (!allIn)
+    throw std::runtime_error("Expected all words to be in");
 }
 
 template <typename Table>
-static void search(benchmark::State& state) {
-  auto size = state.range(0);
+static void NotInDictionary(benchmark::State& state) {
+  MyDictionary<Table> dict(wordsIn);
 
-  auto words = loadWords();
-
-  auto searched = words;
-  std::random_shuffle(searched.begin(), searched.end());
-
-  Dictionary<Table> dict(std::move(words));
-
+  bool someIn = false;
+  auto it = wordsNotIn.begin();
   for (auto _ : state) {
-    for (auto& word : searched) {
-      bool has = dict.isInDictionary(word);
-      benchmark::DoNotOptimize(has);
-    }
+    someIn = someIn || dict.isInDictionary(*it);
+    ++it;
+    if (it == wordsNotIn.end())
+      it = wordsNotIn.begin();
   }
 
-  state.counters["lookup_size"] = searched.size();
-  state.counters["dict_size"] = dict.size();
+  if (someIn)
+    throw std::runtime_error("Expected no words to be in");
 }
 
-BENCHMARK_TEMPLATE(search, Vector);
-BENCHMARK_TEMPLATE(search, Set<std::set<std::string_view>>);
-BENCHMARK_TEMPLATE(search, Set<std::unordered_set<std::string_view>>);
-BENCHMARK_TEMPLATE(search, Set<std::set<std::string>>);
-BENCHMARK_TEMPLATE(search, Set<std::unordered_set<std::string>>);
-BENCHMARK_MAIN();
+BENCHMARK_TEMPLATE(InDictionary, Vector<LinearSearch>);
+BENCHMARK_TEMPLATE(InDictionary, Vector<BinarySearch>);
+BENCHMARK_TEMPLATE(InDictionary, Set<std::set<std::string_view>>);
+BENCHMARK_TEMPLATE(InDictionary, Set<std::unordered_set<std::string_view>>);
+BENCHMARK_TEMPLATE(InDictionary, Set<std::set<std::string>>);
+BENCHMARK_TEMPLATE(InDictionary, Set<std::unordered_set<std::string>>);
+BENCHMARK_TEMPLATE(NotInDictionary, Vector<LinearSearch>);
+BENCHMARK_TEMPLATE(NotInDictionary, Vector<BinarySearch>);
+BENCHMARK_TEMPLATE(NotInDictionary, Set<std::set<std::string_view>>);
+BENCHMARK_TEMPLATE(NotInDictionary, Set<std::unordered_set<std::string_view>>);
+BENCHMARK_TEMPLATE(NotInDictionary, Set<std::set<std::string>>);
+BENCHMARK_TEMPLATE(NotInDictionary, Set<std::unordered_set<std::string>>);
+
+int main(int argc, char** argv) {
+  static const int DICT_SIZE = 100'000;
+  std::vector<std::string> words =
+    createVectorOfUniqueRandomStrings(DICT_SIZE * 2);
+  wordsIn.assign(words.begin(), words.begin() + DICT_SIZE);
+  wordsNotIn.assign(words.begin() + DICT_SIZE, words.end());
+
+  benchmark::Initialize(&argc, argv);
+  if (::benchmark::ReportUnrecognizedArguments(argc, argv))
+    return 1;
+  benchmark::RunSpecifiedBenchmarks();
+}
