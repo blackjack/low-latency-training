@@ -49,6 +49,9 @@ static void sequential(benchmark::State& state) {
 
     benchmark::DoNotOptimize(res);
   }
+
+  state.SetBytesProcessed(2 * size * sizeof(int) * state.iterations());
+  state.counters["data"] = 2 * size * sizeof(int);
 }
 
 template <typename Container>
@@ -68,9 +71,12 @@ static void random(benchmark::State& state) {
 
     benchmark::DoNotOptimize(res);
   }
+
+  state.SetBytesProcessed(2 * size * sizeof(int) * state.iterations());
+  state.counters["data"] = 2 * size * sizeof(int);
 }
 
-BENCHMARK_TEMPLATE(sequential, std::vector<int>)->RangeMultiplier(2)->Range(128, 128 * 1024);
-BENCHMARK_TEMPLATE(random, std::vector<int>)->RangeMultiplier(2)->Range(128, 128 * 1024);
+BENCHMARK_TEMPLATE(sequential, std::vector<int>)->RangeMultiplier(2)->Range(128, 512 * 1024);
+BENCHMARK_TEMPLATE(random, std::vector<int>)->RangeMultiplier(2)->Range(128, 512 * 1024);
 
 BENCHMARK_MAIN();
