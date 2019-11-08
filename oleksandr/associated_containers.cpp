@@ -98,6 +98,9 @@ static void InDictionary(benchmark::State& state) {
 
   if (!allIn)
     throw std::runtime_error("Expected all words to be in");
+
+  state.counters["dict_size"] = dict.size();
+  state.counters["words_in_size"] = wordsIn.size();
 }
 
 template <typename Table>
@@ -115,6 +118,9 @@ static void NotInDictionary(benchmark::State& state) {
 
   if (someIn)
     throw std::runtime_error("Expected no words to be in");
+
+  state.counters["dict_size"] = dict.size();
+  state.counters["words_not_in_size"] = wordsNotIn.size();
 }
 
 BENCHMARK_TEMPLATE(InDictionary, Vector<LinearSearch>);
