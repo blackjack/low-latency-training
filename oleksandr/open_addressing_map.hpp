@@ -10,7 +10,10 @@ struct OpenAddressingMap
 {
   template <typename Iterator>
   OpenAddressingMap(Iterator begin, Iterator end) {
-    data.resize(2 * std::distance(begin, end));
+    auto size = std::distance(begin, end);
+    data.resize(2 * size);
+    strings.reserve(size);
+
     std::for_each(begin, end, [this](auto value) { insert(value); });
   }
 
@@ -25,10 +28,9 @@ struct OpenAddressingMap
       auto& optionalValue = *it;
 
       if (!optionalValue.data) {
-        optionalValue.data = std::make_unique<std::string>(value);
+        strings.emplace_back(value);
+        optionalValue.data = &strings.back();
         optionalValue.hash = hash;
-
-        ++dataSize;
         return;
       }
 
@@ -63,7 +65,7 @@ struct OpenAddressingMap
   }
 
   size_t size() const {
-    return dataSize;
+    return strings.size();
   }
 
 private:
@@ -77,10 +79,10 @@ private:
 
   struct Bucket
   {
-    std::unique_ptr<std::string> data = nullptr;
+    std::string* data = nullptr;
     size_t hash = 0;
   };
 
   std::vector<Bucket> data;
-  size_t dataSize = 0;
+  std::vector<std::string> strings;
 };
