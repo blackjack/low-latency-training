@@ -4,34 +4,14 @@
 #include "../benchmarks2/papipp.h"
 
 #include "dict.hh"
+#include "hash.hh"
 #include "utils.h"
 
 #include <fstream>
 #include <iostream>
 
-static std::vector<std::string> load() {
-  std::ifstream file("/etc/dictionaries-common/words");
-  std::vector<std::string> words;
-
-  std::string word;
-  for (std::string line; std::getline(file, line);) {
-    words.push_back(line);
-  }
-
-  std::cout << "Loaded " << words.size() << " words" << std::endl;
-  return words;
-}
-
-static std::vector<std::string> loadMangled() {
-  std::vector<std::string> words = load();
-  for (std::string &word : words) {
-    word[word.length() / 2] = '_';
-  }
-  return words;
-}
-
-std::vector<std::string> wordsIn;    // = load();
-std::vector<std::string> wordsNotIn; // = loadMangled();
+std::vector<std::string> wordsIn;
+std::vector<std::string> wordsNotIn;
 
 template <typename Dictionary>
 static void InDictionary(benchmark::State &state) {
@@ -67,11 +47,29 @@ static void NotInDictionary(benchmark::State &state) {
     throw std::runtime_error("Expected no words to be in");
 }
 
-BENCHMARK_TEMPLATE(InDictionary, SetDict);
-BENCHMARK_TEMPLATE(NotInDictionary, SetDict);
+// BENCHMARK_TEMPLATE(InDictionary, SetDict);
+// BENCHMARK_TEMPLATE(NotInDictionary, SetDict);
 
-BENCHMARK_TEMPLATE(InDictionary, UnorderedSetDict);
-BENCHMARK_TEMPLATE(NotInDictionary, UnorderedSetDict);
+// BENCHMARK_TEMPLATE(InDictionary, TransparentSetDict);
+// BENCHMARK_TEMPLATE(NotInDictionary, TransparentSetDict);
+
+// BENCHMARK_TEMPLATE(InDictionary, UnorderedSetDict);
+// BENCHMARK_TEMPLATE(NotInDictionary, UnorderedSetDict);
+
+BENCHMARK_TEMPLATE(InDictionary, NonAllocatingUnorderedSetDict);
+BENCHMARK_TEMPLATE(NotInDictionary, NonAllocatingUnorderedSetDict);
+
+BENCHMARK_TEMPLATE(InDictionary, HashDict1);
+BENCHMARK_TEMPLATE(NotInDictionary, HashDict1);
+
+BENCHMARK_TEMPLATE(InDictionary, HashDict2);
+BENCHMARK_TEMPLATE(NotInDictionary, HashDict2);
+
+BENCHMARK_TEMPLATE(InDictionary, HashDictWithModulo);
+BENCHMARK_TEMPLATE(NotInDictionary, HashDictWithModulo);
+
+BENCHMARK_TEMPLATE(InDictionary, HashDict);
+BENCHMARK_TEMPLATE(NotInDictionary, HashDict);
 
 int main(int argc, char **argv) {
   static const int DICT_SIZE = 100'000;
