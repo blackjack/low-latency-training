@@ -32,3 +32,27 @@ target_link_libraries(
   associated_containers
   benchmark
 )
+
+
+add_executable(
+  ipc
+  ipc.cpp
+)
+
+target_link_libraries(
+  ipc
+  benchmark
+  pthread
+)
+
+
+add_executable(
+  volatile
+  volatile.cpp
+)
+
+target_link_libraries(
+  volatile
+  benchmark
+)
+
